@@ -1,10 +1,6 @@
 name: Smart Money Scanner
 
 on:
-  schedule:
-    - cron: '35 9 * * 1-5'
-    - cron: '50 9 * * 1-5'
-
   workflow_dispatch:
 
 jobs:
@@ -25,7 +21,19 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Scanner
+      - name: Debug Secret Check
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          echo "Checking Secret..."
+          if [ -z "$GOOGLE_CREDENTIALS" ]; then
+            echo "SECRET NOT FOUND"
+            exit 1
+          else
+            echo "SECRET FOUND"
+          fi
+
+      - name: Run Python Script
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: python main.py
