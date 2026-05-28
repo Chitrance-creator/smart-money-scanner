@@ -6,16 +6,16 @@ import time
 import os
 import json
 
-# ---------------- GOOGLE SHEETS CONNECTION ---------------- #
+# ---- GOOGLE SHEETS CONNECTION ---- #
 
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Load credentials from GitHub Secret
-
-google_creds = os.environ["GOOGLE_CREDENTIALS"]
+google_creds = os.environ.get("GOOGLE_CREDENTIALS")
+if not google_creds:
+    raise RuntimeError("GOOGLE_CREDENTIALS env var set nahi hai (GitHub Actions secret/env check karo)")
 
 creds_dict = json.loads(google_creds)
 
@@ -26,14 +26,11 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(
 
 client = gspread.authorize(creds)
 
-# ---------------- GOOGLE SHEET ---------------- #
-
-# IMPORTANT:
-# Replace with your exact Google Sheet name
+# ---- GOOGLE SHEET ---- #
 
 sheet = client.open("Nex day target").sheet1
 
-# ---------------- STOCK LIST ---------------- #
+# ---- STOCK LIST ---- #
 
 stocks = [
     "RELIANCE",
@@ -44,50 +41,29 @@ stocks = [
     "SBIN"
 ]
 
-# ---------------- START ROW ---------------- #
-
 row = 2
 
-# ---------------- FETCH DATA ---------------- #
-
 for symbol in stocks:
-
     try:
-
         print(f"Fetching data for {symbol}")
 
-        # NSE Quote Fetch
         quote = nse_quote(symbol)
 
-        # Safe price fetch
-        ltp = quote.get('priceInfo', {}).get('lastPrice', 0)
+        ltp = quote.get("priceInfo", {}).get("lastPrice", 0)
+        volume = quote.get("preOpenMarket", {}).get("totalTradedVolume", 0)
 
-        # Safe volume fetch
-        volume = quote.get('preOpenMarket', {}).get('totalTradedVolume', 0)
-
-        # Current Time
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Data Row
-        data = [[
-            current_time,
-            symbol,
-            ltp,
-            volume
-        ]]
+        data = [[current_time, symbol, ltp, volume]]
 
-        # Update Sheet
         sheet.update(f"A{row}:D{row}", data)
 
         print(f"{symbol} updated successfully")
 
         row += 1
-
-        # Delay to avoid NSE blocking
         time.sleep(2)
 
     except Exception as e:
-
         print(f"Error in {symbol}: {e}")
 
 print("All Stocks Updated Successfully")
